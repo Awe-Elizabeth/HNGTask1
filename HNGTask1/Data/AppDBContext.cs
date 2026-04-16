@@ -10,5 +10,12 @@ namespace HNGTask1.Data
 
         }
         public DbSet<Profile> Profiles {get; set;}
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Profile>()
+                .HasIndex(x => x.Name)
+                .IsUnique();
+        }
     }
 }
