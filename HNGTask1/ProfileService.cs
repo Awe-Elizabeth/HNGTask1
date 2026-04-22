@@ -8,11 +8,13 @@ namespace HNGTask1
     {
         private readonly IConfiguration _config;
         private readonly IProfileRepository _repo;
+        private readonly ILogger<ProfileService> _logger;
 
-        public ProfileService(IConfiguration config, IProfileRepository repo)
+        public ProfileService(IConfiguration config, IProfileRepository repo, ILogger<ProfileService> logger)
         {
             _config = config;
             _repo = repo;
+            _logger = logger;
         }
 
         public async Task<IResult> AddProfile(Request _request)
@@ -60,17 +62,16 @@ namespace HNGTask1
 
                 var result = new Profile
                 {
-                    Name = genderResponse.Name,
-                    Gender = genderResponse.Gender,
-                    Gender_probability = genderResponse.Probability,
-                    Sample_size = genderResponse.Count,
-                    Age = agifyResponse.Age,
-                    Age_group = agifyResponse.Age > 60 ? "senior" : agifyResponse.Age > 20 ? "adult" : agifyResponse.Age > 13 ? "teenager" : "child",
-                    Country_id = nationalizeResponse.Country.MaxBy(x => x.Probability).Country_id,
-                    Country_probability = nationalizeResponse.Country.MaxBy(x => x.Probability).Probability,
-                    Created_at = DateTime.UtcNow
+                    name = genderResponse.Name,
+                    gender = genderResponse.Gender,
+                    gender_probability = genderResponse.Probability,
+                    sample_size = genderResponse.Count,
+                    age = agifyResponse.Age,
+                    age_group = agifyResponse.Age > 60 ? "senior" : agifyResponse.Age > 20 ? "adult" : agifyResponse.Age > 13 ? "teenager" : "child",
+                    country_id = nationalizeResponse.Country.MaxBy(x => x.Probability).Country_id,
+                    country_probability = nationalizeResponse.Country.MaxBy(x => x.Probability).Probability,
                 };
-                var profile = await _repo.GetByName(result.Name);
+                var profile = await _repo.GetByName(result.name);
                 if (profile != null) {
                     return Results.Json(new { staus = "success", message = "Profile already exists", data = profile }, statusCode: 200);
                 }
@@ -80,15 +81,37 @@ namespace HNGTask1
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"an error occured while creating prifile:{_request.name} ", ex.Message);
+                _logger.LogError($"an error occured while creating prifile:{_request.name}: {ex.Message}" );
                 return Results.Json(new { staus = "error", message = "an error occured" }, statusCode:500);
             }
         }
 
-        public async Task<IResult> GetAllProfiles(string? gender, string? country_Id, string? age_roup)
+        public async Task<IResult> GetAllProfiles(string? gender, string? country_Id, string? age_roup, int? min_age, int? max_age, double? min_gender_probability, double? min_country_probability, string? sort_by, string? order, int page = 1, int limit = 10) 
         {
-            var profiles =  await _repo.GetProfiles(gender, country_Id, age_roup);
-            return Results.Json(new { status = "success", count = profiles.Count, data = profiles });
+            try
+            {
+                var profilesResult = await _repo.GetProfiles(gender, country_Id, age_roup, min_age, max_age, min_gender_probability, min_country_probability, sort_by, order, page, limit);
+                return Results.Json(new { status = "success", page = profilesResult.Page, limit = profilesResult.Limit, total = profilesResult.TotalCount, data = profilesResult.Profiles });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"an error occured while getting profiles: {ex.Message}");
+                return Results.Json(new { staus = "error", message = "an error occured" }, statusCode: 500);
+            }
+        }
+        public async Task<IResult> GetProfilesBySearch(string query, int page = 1, int limit = 10)
+        {
+            try
+            {
+                var queryResult = ProfileSearchParser.Parse(query);
+                var profilesResult = await _repo.GetProfiles(queryResult.Gender, queryResult.CountryId, queryResult.AgeGroup, queryResult.MinAge, queryResult.MaxAge, null, null, null, null, page, limit);
+                return Results.Json(new { status = "success", page = profilesResult.Page, limit = profilesResult.Limit, total = profilesResult.TotalCount, data = profilesResult.Profiles });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"an error occured while getting profiles: {ex.Message}");
+                return Results.Json(new { staus = "error", message = "an error occured" }, statusCode: 500);
+            } 
         }
 
         public async Task<IResult> GetSingleProfile(Guid id)
@@ -108,7 +131,7 @@ namespace HNGTask1
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"an error occured while fetching {id}: ", ex.Message);
+                _logger.LogError($"an error occured while fetching {id}: {ex.Message}");
                 return Results.Json(new { status = "error", message = "an error has occured" }, statusCode: 500);
             }
         }
@@ -130,7 +153,7 @@ namespace HNGTask1
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"an error occured while deleting {id}: ", ex.Message);
+                _logger.LogError($"an error occured while deleting {id}: ", ex.Message);
                 return Results.Json(new { status = "error", message = "an error has occured" }, statusCode: 500);
             }
         }
