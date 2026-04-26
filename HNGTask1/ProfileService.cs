@@ -1,4 +1,5 @@
 ﻿using HNGTask1.DTO;
+using HNGTask1.Essential_Enums;
 using HNGTask1.Models;
 using HNGTask1.Repository;
 using System.Runtime.CompilerServices;
@@ -90,6 +91,10 @@ namespace HNGTask1
         {
             try
             {
+                if(!string.IsNullOrEmpty(sort_by) && !Enum.TryParse<SortEnum>(sort_by, true, out _))
+                {
+                    return Results.Json(new { staus = "error", message = "Invalid query parameters" }, statusCode: 400);
+                }
                 var profilesResult = await _repo.GetProfiles(gender, country_Id, age_roup, min_age, max_age, min_gender_probability, min_country_probability, sort_by, order, page, limit);
                 return Results.Json(new { status = "success", page = profilesResult.Page, limit = profilesResult.Limit, total = profilesResult.TotalCount, data = profilesResult.Profiles });
             }
@@ -104,6 +109,7 @@ namespace HNGTask1
             try
             {
                 var queryResult = ProfileSearchParser.Parse(query);
+
                 var profilesResult = await _repo.GetProfiles(queryResult.Gender, queryResult.CountryId, queryResult.AgeGroup, queryResult.MinAge, queryResult.MaxAge, null, null, null, null, page, limit);
                 return Results.Json(new { status = "success", page = profilesResult.Page, limit = profilesResult.Limit, total = profilesResult.TotalCount, data = profilesResult.Profiles });
             }
