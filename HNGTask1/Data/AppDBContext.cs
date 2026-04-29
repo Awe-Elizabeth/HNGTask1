@@ -9,7 +9,9 @@ namespace HNGTask1.Data
         {
 
         }
-        public DbSet<Profile> Profiles {get; set;}
+        public DbSet<Profile> Profiles { get; set; }
+        public DbSet<User> Users { get; set; }  
+        public DbSet<RefreshToken> RefreshTokens {get; set;}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,10 +26,22 @@ namespace HNGTask1.Data
                 .HasDefaultValueSql("GETUTCDATE()");
             });
 
-            modelBuilder.Entity<Profile>(
-                )
-                .HasIndex(x => x.name)
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasIndex(u => u.github_id)
                 .IsUnique();
+                entity.Property(u => u.name)
+                .HasMaxLength(50);
+                entity.Property(u => u.email)
+                .HasMaxLength(50);
+                entity.Property(u => u.created_at)
+                .HasDefaultValueSql("GETUTCDATE()");
+            });
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasIndex(t => t.id);
+            });
+
         }
     }
 }

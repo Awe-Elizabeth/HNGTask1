@@ -1,19 +1,43 @@
-using HNGTask1;
 using HNGTask1.Data;
 using HNGTask1.Data.Seed;
 using HNGTask1.DTO;
+using HNGTask1.Extensions;
 using HNGTask1.Models;
-using HNGTask1.Repository;
+using HNGTask1.Repository.Implemetations;
+using HNGTask1.Repository.Interfaces;
+using HNGTask1.Services;
+using HNGTask1.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<AppDBContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
-builder.Services.AddCors();
+builder.Services.AddCors( options =>
+{
+    options.AddPolicy("InsightaPolicy", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+builder.Services.AddSwaggerGen();
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddAuthorization();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ISeeder, ProfileSeeder>();
 builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+
+
+
 // Add services to the container.
 
 var app = builder.Build();
@@ -35,36 +59,54 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
-app.UseCors(policy =>
-    policy.AllowAnyOrigin()
-          .AllowAnyHeader()
-          .AllowAnyMethod());
+app.UseCors("InsightaPolicy");
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapAuthEndpoints();
+app.MapProfileEndpoints();
 
-
-app.MapPost("api/profiles", async (Request _request, ProfileService service) =>
+if (app.Environment.IsDevelopment())
 {
-    return await service.AddProfile(_request);
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.MapGet("api/profiles", async (ProfileService service, string ? gender, string ? country_Id, string ? age_group, int ? min_age, int ? max_age,  double ? min_gender_probability, double ? min_country_probability, string? sort_by, string? order, int page = 1, int limit = 10) =>
-{
-    return await service.GetAllProfiles(gender, country_Id, age_group, min_age, max_age, min_gender_probability, min_country_probability, sort_by, order, page, limit);
-});
-app.MapGet("api/profiles/search", async ( ProfileService service, string q, int page = 1, int limit = 10) =>
-{
-    return await service.GetProfilesBySearch(q, page, limit);
-});
 
-app.MapGet("api/profiles/{id}", async (Guid id, ProfileService service) =>
-{
-    return await service.GetSingleProfile(id);
-});
+//app.MapGet("/auth/github", async (AuthService auth_service) =>
+//{
+//    return await auth_service.Authorize();
+//});
+//app.MapPost("/auth/github/callback", async (AuthService auth_service, AuthCallbackParameter callbackParameters) =>
+//{
+//    return await auth_service.AuthorizeCallback(callbackParameters);
+//});
+//app.MapGet("/auth/refresh", async (AuthService auth_service, RefreshTokenDTO token) =>
+//{
+//    return await auth_service.Refresh(token);
+//});
+//app.MapPost("api/profiles", async (Request _request, ProfileService service) =>
+//{
+//    return await service.AddProfile(_request);
+//});
+//app.MapGet("api/profiles", async (ProfileService service, string ? gender, string ? country_Id, string ? age_group, int ? min_age, int ? max_age,  double ? min_gender_probability, double ? min_country_probability, string? sort_by, string? order, int page = 1, int limit = 10) =>
+//{
+//    return await service.GetAllProfiles(gender, country_Id, age_group, min_age, max_age, min_gender_probability, min_country_probability, sort_by, order, page, limit);
+//});
+//app.MapGet("api/profiles/search", async ( ProfileService service, string q, int page = 1, int limit = 10) =>
+//{
+//    return await service.GetProfilesBySearch(q, page, limit);
+//});
 
-app.MapDelete("api/profiles/{id}", async (Guid id, ProfileService service) =>
-{
-    return await service.DeleteProfile(id);
-});
+//app.MapGet("api/profiles/{id}", async (Guid id, ProfileService service) =>
+//{
+//    return await service.GetSingleProfile(id);
+//});
+
+//app.MapDelete("api/profiles/{id}", async (Guid id, ProfileService service) =>
+//{
+//    return await service.DeleteProfile(id);
+//});
 
 app.Run();
 

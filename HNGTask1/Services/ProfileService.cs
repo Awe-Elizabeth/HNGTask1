@@ -1,9 +1,9 @@
 ﻿using HNGTask1.DTO;
 using HNGTask1.Essential_Enums;
 using HNGTask1.Models;
-using HNGTask1.Repository;
+using HNGTask1.Repository.Interfaces;
 using System.Runtime.CompilerServices;
-namespace HNGTask1
+namespace HNGTask1.Services
 {
     public class ProfileService
     {
