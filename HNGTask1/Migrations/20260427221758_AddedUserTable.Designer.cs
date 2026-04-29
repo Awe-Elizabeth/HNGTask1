@@ -4,6 +4,7 @@ using HNGTask1.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HNGTask1.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260427221758_AddedUserTable")]
+    partial class AddedUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -72,35 +75,6 @@ namespace HNGTask1.Migrations
                         .IsUnique();
 
                     b.ToTable("Profiles");
-                });
-
-            modelBuilder.Entity("HNGTask1.Models.RefreshToken", b =>
-                {
-                    b.Property<Guid>("id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("created_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("expires_at")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("is_valid")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("user_id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("id");
-
-                    b.HasIndex("id");
-
-                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("HNGTask1.Models.User", b =>

@@ -1,11 +1,12 @@
 ﻿using HNGTask1.Data;
 using HNGTask1.DTO;
 using HNGTask1.Models;
+using HNGTask1.Repository.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
 using System.Threading.Tasks;
 
-namespace HNGTask1.Repository
+namespace HNGTask1.Repository.Implemetations
 {
     public class ProfileRepository : IProfileRepository
     {
@@ -40,7 +41,7 @@ namespace HNGTask1.Repository
         public async Task<Profile> GetByName(string Name)
         {
 
-            return await _context.Profiles.FirstOrDefaultAsync<Profile>(p => p.name == Name);
+            return await _context.Profiles.FirstOrDefaultAsync(p => p.name == Name);
 
         }
 
