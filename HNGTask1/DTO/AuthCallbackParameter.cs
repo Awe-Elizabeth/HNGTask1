@@ -2,7 +2,7 @@
 {
     public class AuthCallbackParameter
     {
-        public string code { get; set; }
-        public string state { get; set; }
+        public string? code { get; set; }
+        public string? state { get; set; }
     }
 }

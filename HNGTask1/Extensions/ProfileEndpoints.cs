@@ -12,12 +12,13 @@ namespace HNGTask1.Extensions
         public static void MapProfileEndpoints(this IEndpointRouteBuilder app)
         {
             var group = app.MapGroup("/api/profiles")
-                .RequireAuthorization();
+                .RequireAuthorization()
+                .RequireRateLimiting("user-policy");
 
             group.MapPost("", async (Request request, ProfileService service) =>
             {
                 return await service.AddProfile(request);
-            });
+            }).RequireAuthorization(new AuthorizeAttribute { Roles = UserEnum.admin.ToString() }); 
 
             group.MapGet("", async (
                 ProfileService service,

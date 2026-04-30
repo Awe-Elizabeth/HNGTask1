@@ -8,8 +8,10 @@ using HNGTask1.Repository.Interfaces;
 using HNGTask1.Services;
 using HNGTask1.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
@@ -31,10 +33,38 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ISeeder, ProfileSeeder>();
+builder.Services.AddScoped<ISeeder, SeedUsers>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITokenRepository, TokenRepository>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth-policy", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+
+    options.AddPolicy("user-policy", context =>
+    {
+        var userId =
+            context.User?.FindFirst("sub")?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: userId,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+});
 
 
 
@@ -47,7 +77,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var seeder = scope.ServiceProvider.GetRequiredService<ISeeder>();
+    var seeders = scope.ServiceProvider.GetServices<ISeeder>();
     var conn = config.GetConnectionString("DbConnection");
 
     if (string.IsNullOrWhiteSpace(conn))
@@ -55,7 +85,10 @@ using (var scope = app.Services.CreateScope())
 
     var db = scope.ServiceProvider.GetRequiredService<AppDBContext>();
     db.Database.Migrate();
-    await seeder.SeedAsync(db);
+    foreach(var seeder in seeders)
+    {
+        await seeder.SeedAsync(db);
+    }
 }
 
 app.UseHttpsRedirection();
@@ -65,6 +98,8 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapProfileEndpoints();
+
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {

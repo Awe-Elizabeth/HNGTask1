@@ -32,8 +32,27 @@ namespace HNGTask1.Extensions
 
                         ClockSkew = TimeSpan.Zero
                     };
-                });
 
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var token = context.Request.Headers["Authorization"]
+                                .FirstOrDefault()?
+                                .Split(" ")
+                                .Last();
+
+                            if (string.IsNullOrEmpty(token))
+                            {
+                                token = context.Request.Cookies["access_token"];
+                            }
+
+                            context.Token = token;
+
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
             return services;
         }
     }
